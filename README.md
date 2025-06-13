@@ -8,6 +8,16 @@
 
 ## 🔥 News:
 
+* 📢 If you're attending CVPR 2025 at Nashville, welcome to join our talk and poster session on Sunday, June 15 (the final day)!
+
+  🗣️ **Oral Session 5A: Generative AI**
+   📍 Karl Dean Grand Ballroom | 🕘 9:00 AM
+
+  📌 **Poster Session #200**
+   📍 Exhibit Hall D | 🕥 10:30 AM – 12:30 PM
+
+  More details: check our [CVPR page](https://cvpr.thecvf.com/virtual/2025/oral/35347).
+
 * 🎉 **April 2025**: DAPS is accepted as **CVPR 2025 Oral** Presentation!
 
 * ⚙️ **March 2025**: Major code restructuring for enhanced modularity:
