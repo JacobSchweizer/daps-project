@@ -7,7 +7,11 @@ or
 conda env create -f environmen-exact.yml
 
 
+pip install modal
 
+modal token new
+
+modal run modal_app.py
 
 
 python posterior_sample.py \
