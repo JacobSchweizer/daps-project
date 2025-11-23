@@ -4,7 +4,7 @@ conda env create -f environment.yml
 
 or 
 
-conda env create -f environmen-exact.yml
+conda env create -f environment-exact.yml
 
 
 pip install modal
@@ -37,10 +37,10 @@ python posterior_sample.py \
   +sampler=edm_daps \
   task_group=pixel \
   save_dir=results/pixel/ffhq/phase_retrieval \
-  num_runs=4 \
+  num_runs=1 \
   sampler.diffusion_scheduler_config.num_steps=5 \
   sampler.annealing_scheduler_config.num_steps=200 \
-  batch_size=32 \
+  batch_size=100 \
   name=phase_retrieval \
   gpu=0
 

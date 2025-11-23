@@ -37,7 +37,7 @@ dependencies:
       - certifi==2022.9.14
       - charset-normalizer==2.1.1
       - click==8.1.7
-      - clip==1.0
+      - open-clip-torch==2.24.0
       - contourpy==1.0.5
       - cycler==0.11.0
       - diffusers==0.32.2
