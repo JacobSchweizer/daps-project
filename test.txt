@@ -1,0 +1,89 @@
+#### Create conda enviroment
+
+conda env create -f environment.yml
+
+or 
+
+conda env create -f environmen-exact.yml
+
+
+
+
+
+python posterior_sample.py \
+  +data=<DATASET_NAME> \
+  +model=<MODEL_NAME> \
+  +task=<TASK_NAME> \
+  +sampler=edm_daps \
+  task_group=pixel \
+  save_dir=<OUTPUT_DIR> \
+  num_runs=<NUM_RUNS> \
+  sampler.diffusion_scheduler_config.num_steps=5 \
+  sampler.annealing_scheduler_config.num_steps=200 \
+  batch_size=<BATCH_SIZE> \
+  name=<EXPERIMENT_NAME> \
+  gpu=<GPU_ID
+
+
+#########
+python posterior_sample.py \
+  +data=test-ffhq \
+  +model=ffhq256ddpm \
+  +task=phase_retrieval \
+  +sampler=edm_daps \
+  task_group=pixel \
+  save_dir=results/pixel/ffhq/phase_retrieval \
+  num_runs=4 \
+  sampler.diffusion_scheduler_config.num_steps=5 \
+  sampler.annealing_scheduler_config.num_steps=200 \
+  batch_size=32 \
+  name=phase_retrieval \
+  gpu=0
+
+
+######### 
+python posterior_sample.py \
+  +data=test-imagenet \
+  +model=imagenet256ddpm \
+  +task=phase_retrieval \
+  +sampler=edm_daps \
+  task_group=pixel \
+  save_dir=results/pixel/imagenet/phase_retrieval \
+  num_runs=4 \
+  sampler.diffusion_scheduler_config.num_steps=5 \
+  sampler.annealing_scheduler_config.num_steps=200 \
+  batch_size=32 \
+  name=phase_retrieval \
+  gpu=0
+
+
+###########
+python posterior_sample.py \
+  +data=test-ffhq \
+  +model=ffhq256ddpm \
+  +task=inpainting \
+  +sampler=edm_daps \
+  task_group=pixel \
+  save_dir=results/pixel/ffhq/inpainting \
+  num_runs=1 \
+  sampler.diffusion_scheduler_config.num_steps=5 \
+  sampler.annealing_scheduler_config.num_steps=200 \
+  batch_size=32 \
+  name=inpainting \
+  gpu=0
+
+
+############
+python posterior_sample.py \
+  +data=test-imagenet \
+  +model=imagenet256ddpm \
+  +task=inpainting \
+  +sampler=edm_daps \
+  task_group=pixel \
+  save_dir=results/pixel/imagenet/inpainting \
+  num_runs=1 \
+  sampler.diffusion_scheduler_config.num_steps=5 \
+  sampler.annealing_scheduler_config.num_steps=200 \
+  batch_size=32 \
+  name=inpainting \
+  gpu=0
