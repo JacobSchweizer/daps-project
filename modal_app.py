@@ -71,6 +71,58 @@ def _seed_from_workspace(subdir: str):
             subprocess.check_call(["bash", "-lc", f"cp -a {src}/. {dst}/"])
 
 
+def _install_requirements(reqs_path: str):
+    """Install project requirements, skipping Torch stack (already baked in)."""
+    wheel_dir = "/vol/pip-wheels"
+    os.makedirs(wheel_dir, exist_ok=True)
+
+    if not os.path.exists(reqs_path):
+        print(f"ℹ️ No requirements file at {reqs_path}; continuing without extra deps.")
+        return
+
+    print(f"📦 Installing project requirements from {reqs_path}...")
+    filtered_reqs = "/tmp/requirements.filtered.txt"
+
+    skip_re = re.compile(
+        r"^\s*(torch|torchvision|torchaudio|triton|pytorch-cuda)\b",
+        re.IGNORECASE,
+    )
+
+    with open(reqs_path, "r") as f_in, open(filtered_reqs, "w") as f_out:
+        for line in f_in:
+            if skip_re.match(line):
+                print(f"↪️  Skipping pinned torch line: {line.strip()}")
+                continue
+            f_out.write(line)
+
+    subprocess.call([sys.executable, "-m", "pip", "install", "-U", "pip"])
+
+    # Try wheel cache first
+    try:
+        subprocess.call([
+            sys.executable, "-m", "pip", "download",
+            "-r", filtered_reqs, "-d", wheel_dir,
+            "--retries", "5", "--timeout", "1000",
+            "-i", "https://pypi.org/simple",
+        ])
+    except Exception:
+        print("⚠️  pip download hiccup; continuing.")
+
+    try:
+        subprocess.call([
+            sys.executable, "-m", "pip", "install",
+            "--no-index", "--find-links", wheel_dir,
+            "-r", filtered_reqs,
+        ])
+    except Exception:
+        subprocess.call([
+            sys.executable, "-m", "pip", "install",
+            "-r", filtered_reqs,
+            "--retries", "5", "--timeout", "1000",
+            "-i", "https://pypi.org/simple",
+        ])
+
+
 # ------------------ Main experiment ------------------
 
 @app.function(image=image, gpu="A100-80GB", timeout=2 * 60 * 60, volumes={"/vol": vol})
@@ -82,58 +134,14 @@ def run_experiment(
     batch_size: int = 32,
     num_runs: int = 4,
     name: str = "phase_retrieval",
-    task: str = "phase_retrieval",   # 👈 NEW: task parameter
+    task: str = "phase_retrieval",
+    sampler: str = "edm_daps",
+    task_group: str = "pixel",
 ):
     os.chdir("/workspace")
 
-    # 1) Install Python deps, but skip torch/vision/audio (already preinstalled)
-    wheel_dir = "/vol/pip-wheels"
-    os.makedirs(wheel_dir, exist_ok=True)
-
-    if os.path.exists(reqs_path):
-        print(f"📦 Installing project requirements from {reqs_path}...")
-        filtered_reqs = "/tmp/requirements.filtered.txt"
-
-        skip_re = re.compile(
-            r"^\s*(torch|torchvision|torchaudio|triton|pytorch-cuda)\b",
-            re.IGNORECASE,
-        )
-
-        with open(reqs_path, "r") as f_in, open(filtered_reqs, "w") as f_out:
-            for line in f_in:
-                if skip_re.match(line):
-                    print(f"↪️  Skipping pinned torch line: {line.strip()}")
-                    continue
-                f_out.write(line)
-
-        subprocess.call([sys.executable, "-m", "pip", "install", "-U", "pip"])
-
-        # Try wheel cache first
-        try:
-            subprocess.call([
-                sys.executable, "-m", "pip", "download",
-                "-r", filtered_reqs, "-d", wheel_dir,
-                "--retries", "5", "--timeout", "1000",
-                "-i", "https://pypi.org/simple",
-            ])
-        except Exception:
-            print("⚠️  pip download hiccup; continuing.")
-
-        try:
-            subprocess.call([
-                sys.executable, "-m", "pip", "install",
-                "--no-index", "--find-links", wheel_dir,
-                "-r", filtered_reqs,
-            ])
-        except Exception:
-            subprocess.call([
-                sys.executable, "-m", "pip", "install",
-                "-r", filtered_reqs,
-                "--retries", "5", "--timeout", "1000",
-                "-i", "https://pypi.org/simple",
-            ])
-    else:
-        print(f"ℹ️ No requirements file at {reqs_path}; continuing without extra deps.")
+    # 1) Install Python deps (incl. piq), skip torch stack
+    _install_requirements(reqs_path)
 
     # 2) Symlink persistent dirs and seed from your baked repo
     for d in ["checkpoints", "dataset", "results"]:
@@ -174,19 +182,63 @@ def run_experiment(
         "python", "posterior_sample.py",
         f"+data={data}",
         f"+model={model}",
-        f"+task={task}",                     # 👈 now configurable
-        "+sampler=edm_daps",
-        "task_group=pixel",
+        f"+task={task}",
+        f"+sampler={sampler}",
+        f"task_group={task_group}",
         f"save_dir={save_dir}",
         f"num_runs={num_runs}",
         "sampler.diffusion_scheduler_config.num_steps=5",
         "sampler.annealing_scheduler_config.num_steps=200",
         f"batch_size={batch_size}",
         f"name={name}",
-        "gpu=0",                            # single GPU in Modal container
+        "gpu=0",
     ]
 
     print("🚀 Running:", " ".join(cmd))
+    rc = subprocess.call(cmd)
+
+    vol.commit()
+    sys.exit(rc)
+
+
+# ------------------ FID evaluation ------------------
+
+@app.function(image=image, gpu="A100-80GB", timeout=60 * 60, volumes={"/vol": vol})
+def run_fid(
+    reqs_path: str = "/workspace/requirements.txt",
+    real_root: str = "dataset/test-ffhq",
+    fake_root: str = "results/pixel/ffhq/inpainting/samples",
+    resolution: int = 256,
+    start_id: int = 0,
+    end_id: int = 100,
+    batch_size: int = 100,
+):
+    """
+    Run FID evaluation by calling evaluate_fid.py inside the same workspace/volume.
+    """
+    os.chdir("/workspace")
+
+    # Install deps (so piq is available)
+    _install_requirements(reqs_path)
+
+    # Make sure dataset/results/checkpoints from the volume are visible
+    for d in ["checkpoints", "dataset", "results"]:
+        _ensure_symlink_to_vol(d)
+
+    _seed_from_workspace("checkpoints")
+    _seed_from_workspace("dataset")
+
+    cmd = [
+        "python", "evaluate_fid.py",
+        f"--real_root={real_root}",
+        f"--fake_root={fake_root}",
+        f"--resolution={resolution}",
+        f"--start_id={start_id}",
+        f"--end_id={end_id}",
+        f"--batch_size={batch_size}",
+    ]
+
+    print("🚀 Running FID eval:", " ".join(cmd))
     rc = subprocess.call(cmd)
 
     vol.commit()
@@ -205,6 +257,8 @@ def main(
     num_runs: int = 4,
     name: str = "phase_retrieval",
     task: str = "phase_retrieval",
+    sampler: str = "edm_daps",
+    task_group: str = "pixel",
 ):
     """
     Called when you do:
@@ -219,4 +273,6 @@ def main(
         num_runs=num_runs,
         name=name,
         task=task,
+        sampler=sampler,
+        task_group=task_group,
     )

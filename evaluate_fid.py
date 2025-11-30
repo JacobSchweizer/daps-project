@@ -3,7 +3,6 @@ from data import ImageDataset
 from torch.utils.data import DataLoader
 from torchvision.models import inception_v3
 from piq import FID
-import torch
 import torch.nn.functional as F
 
 def preprocess(images):
@@ -43,14 +42,45 @@ def calculate_fid(real_loader, generated_loader, device='cuda'):
     score = fid.compute_metric(real_features, gen_features)
     return score
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
     # ++++++++++++++++++++++++++++++++++++++
     # Please change the path to your dataset
-    real_dataset = ImageDataset(root='dataset/test-ffhq', resolution=256, start_id=0, end_id=100)
-    fake_dataset = ImageDataset(root='results/pixel/ffhq/inpainting/samples', resolution=256, start_id=0, end_id=100)
+    '''real_dataset = ImageDataset(root='dataset/test-ffhq', resolution=256, start_id=0, end_id=100)
+    fake_dataset = ImageDataset(root='/samples', resolution=256, start_id=0, end_id=100)
 
     real_loader = DataLoader(real_dataset, batch_size=100, shuffle=False)
     fake_loader = DataLoader(fake_dataset, batch_size=100, shuffle=False)
+
+    fid_score = calculate_fid(real_loader, fake_loader)
+    print(f'FID Score: {fid_score.item():.4f}')'''
+
+import argparse
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--real_root", type=str, default="dataset/test-ffhq")
+    parser.add_argument("--fake_root", type=str, default="results/pixel/ffhq/inpainting/samples")
+    parser.add_argument("--resolution", type=int, default=256)
+    parser.add_argument("--start_id", type=int, default=0)
+    parser.add_argument("--end_id", type=int, default=100)
+    parser.add_argument("--batch_size", type=int, default=100)
+    args = parser.parse_args()
+
+    real_dataset = ImageDataset(
+        root=args.real_root,
+        resolution=args.resolution,
+        start_id=args.start_id,
+        end_id=args.end_id,
+    )
+    fake_dataset = ImageDataset(
+        root=args.fake_root,
+        resolution=args.resolution,
+        start_id=args.start_id,
+        end_id=args.end_id,
+    )
+
+    real_loader = DataLoader(real_dataset, batch_size=args.batch_size, shuffle=False)
+    fake_loader = DataLoader(fake_dataset, batch_size=args.batch_size, shuffle=False)
 
     fid_score = calculate_fid(real_loader, fake_loader)
     print(f'FID Score: {fid_score.item():.4f}')

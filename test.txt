@@ -14,80 +14,22 @@ modal token new
 modal run modal_app.py
 
 
-python posterior_sample.py \
-  +data=<DATASET_NAME> \
-  +model=<MODEL_NAME> \
-  +task=<TASK_NAME> \
-  +sampler=edm_daps \
-  task_group=pixel \
-  save_dir=<OUTPUT_DIR> \
-  num_runs=<NUM_RUNS> \
-  sampler.diffusion_scheduler_config.num_steps=5 \
-  sampler.annealing_scheduler_config.num_steps=200 \
-  batch_size=<BATCH_SIZE> \
-  name=<EXPERIMENT_NAME> \
-  gpu=<GPU_ID
+modal run modal_app.py \
+  --data test-ffhq \
+  --model ffhq256ldm \
+  --task inpainting \
+  --save-dir results/ldm/ffhq \
+  --batch-size 10 \
+  --num-runs 1 \
+  --name inpainting
 
-
-#########
-python posterior_sample.py \
-  +data=test-ffhq \
-  +model=ffhq256ddpm \
-  +task=phase_retrieval \
-  +sampler=edm_daps \
-  task_group=pixel \
-  save_dir=results/pixel/ffhq/phase_retrieval \
-  num_runs=1 \
-  sampler.diffusion_scheduler_config.num_steps=5 \
-  sampler.annealing_scheduler_config.num_steps=200 \
-  batch_size=100 \
-  name=phase_retrieval \
-  gpu=0
-
-
-######### 
-python posterior_sample.py \
-  +data=test-imagenet \
-  +model=imagenet256ddpm \
-  +task=phase_retrieval \
-  +sampler=edm_daps \
-  task_group=pixel \
-  save_dir=results/pixel/imagenet/phase_retrieval \
-  num_runs=4 \
-  sampler.diffusion_scheduler_config.num_steps=5 \
-  sampler.annealing_scheduler_config.num_steps=200 \
-  batch_size=32 \
-  name=phase_retrieval \
-  gpu=0
-
-
-###########
-python posterior_sample.py \
-  +data=test-ffhq \
-  +model=ffhq256ddpm \
-  +task=inpainting \
-  +sampler=edm_daps \
-  task_group=pixel \
-  save_dir=results/pixel/ffhq/inpainting \
-  num_runs=1 \
-  sampler.diffusion_scheduler_config.num_steps=5 \
-  sampler.annealing_scheduler_config.num_steps=200 \
-  batch_size=32 \
-  name=inpainting \
-  gpu=0
-
-
-############
-python posterior_sample.py \
-  +data=test-imagenet \
-  +model=imagenet256ddpm \
-  +task=inpainting \
-  +sampler=edm_daps \
-  task_group=pixel \
-  save_dir=results/pixel/imagenet/inpainting \
-  num_runs=1 \
-  sampler.diffusion_scheduler_config.num_steps=5 \
-  sampler.annealing_scheduler_config.num_steps=200 \
-  batch_size=32 \
-  name=inpainting \
-  gpu=0
+modal run modal_app.py \
+  --data test-celeba \
+  --model ffhq256ddpm \
+  --task inpainting_rand \
+  --sampler edm_daps \
+  --task_group pixel \
+  --save_dir results/pixel/celeba_rand_inpaint \
+  --batch_size 100 \
+  --num_runs 1 \
+  --name celeba_rand_inpaint
